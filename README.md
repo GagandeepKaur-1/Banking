@@ -1,2 +1,6 @@
 # Banking
 Project was related to Campaigns run by a Portuguese Bank.
+
+A Portugese bank was initiating term deposit for its customers. They had in the past communicated with their customer base through phone calls. Results for these previous campaigns were recorded and analysed for making the future campaigns more productive. Two datasets were given - bank-full_train.csv and bank-full_test.csv . Previous campaign data which has been made available contained customer characteristics , campaign characteristics, previous campaign information as well as whether customer ended up subscribing to the product as a result of that campaign or not. Using that data, a plan was made to develop a model to predict whether customers would subscribe or not. An efficient would lower the burden of calling uninterested customers and targeting  the likely prospects. Predictive model for response variable “y” had to be build. Bank-full_test data contains all other factors except “y”. Predictions using the model developed had to be made and submitted in a csv file. Evaluation Criterion was the KS score on test data. Larger the KS, the better the model. 
+
+	Solution: A model using Gradient Boosting Machines was developed and predictions were made on the basis of the model created.  A good KS score was obtained (0.89) and predictions were evaluated to be correct.
