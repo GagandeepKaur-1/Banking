@@ -1,39 +1,100 @@
-# History files
-.Rhistory
-.Rapp.history
+bf_train=read.csv("bank-full_train.csv",stringsAsFactors=F)
+bf_test=read.csv("bank-full_test.csv",stringsAsFactors=F)
+bf_train$data="train"
+bf_test$y=NA
+bf_test$data="test"
+bf_train$y=as.numeric(bf_train$y=="yes")
+bf=rbind(bf_train,bf_test)
+char_cols=names(bf)[sapply(bf, function(x) is.character(x))]
+char_cols
+for (col in char_cols){
+bf=CreateDummies(bf,col,100)
+}
+for (col in names(bf)){
+if(sum(is.na(bf[,col]))>0 & !(col %in% c("data","y"))){
+bf[is.na(bf[,col]),col]=mean(bf[bf$data=="train",col],na.rm=T)
+}
+}
+bf$y=as.numeric((bf$y==1))
+bf$y=as.factor(bf$y)
+bf_train=bf%>% filter(data=="train") %>% select(-data)
+bf_test=bf%>% filter(data=="test") %>% select(-data)
+param=list(interaction.depth=c(1:7),n.trees=c(50,100,200,500,700),shrinkage=c(.1,.01,.001), n.minobsinnode=c(1,2,5,10))
+num_trials=10
+my_params=subset_paras(param,num_trials)
+mycost_auc=function(y,yhat){
+roccurve=pROC::roc(y,yhat)
+score=pROC::auc(roccurve)
+return(score)
+}
+myauc=0
+bf$y=as.numeric(bf$y==2)
+bf_train=bf%>% filter(data=="train") %>% select(-data)
+bf_test=bf %>% filter(data=="test") %>% select(-data)
+glimpse(bf_train)
+mycost_auc=function(y,yhat){
+occurve=pROC::roc(y,yhat)
+score=pROC::auc(roccurve)
+return(score)
+}
+for (i in 1: num_trials){
+print(paste("starting iteration",i))
+params=my_params[i,]
+k=cvTuning(gbm,y~.-ID,data=bf_train,tuning=params, args=list(distribution="bernoulli"), folds=cvFolds(nrow(bf_train), K=10, type="random"),           cost=mycost_auc, seed=2, predictArgs=list(type="response",                      n.trees=params$n.trees))
+score.this=k$cv[,2]
+if (score.this>myauc){
+print(params)
+myauc=score.this
+print(myauc)
+best_params=params
+}
+}
+myauc
+[1] 0.9310793
+best_params
+    interaction.depth n.trees shrinkage n.minobsinnode
+137                 4     700       0.1              2
+bf.gbm.final=gbm(y~.-ID,data=bf_train, n.trees=best_params$n.trees,n.minobsinnode=best_params$n.minobsinnode,shrinkage=best_params$shrinkage, interaction.depth=best_params$interaction.depth, distribution="bernoulli")
+test.score=predict(bf.gbm.final,newdata=bf_test,type="response", n.trees=best_params$n.trees)
+write.csv(test.score,"mysubmission.csv",row.names=F)
+train.score=predict(bf.gbm.final,newdata=bf_train,type="response", n.trees=best_params$bf_trees)
+real=bf_train$y
+cutoffs=seq(0.001,0.999,0.001)
+cutoff_data=data.frame(cutoff=99,Sn=99,Sp=99,KS=99,F5=99,F.1=99,M=99)
+for (cutoff in cutoffs){
+predicted=as.numeric(train.score>cutoff)
+TP=sum(real==1 & predicted==1)
+TN=sum(real==0 & predicted==0)
+FP=sum(real==0 & predicted==1)
+FN=sum(real==1 & predicted==0)
+P=TP+FN
+N=TN+FP
+Sn=TP/P
+Sp=TN/N
+precision=TP/(TP+FP)
+recall=Sn
+KS=(TP/P)-(FP/N)
+F5=(26 * precision * recall)/((25 * precision) + recall)
+F.1=(1.01 * precision * recall)/((0.01 *precision)+ recall)
+M=(4* FP+FN)/(5 * (P+N))
+cutoff_data=rbind(cutoff_data,c(cutoff,Sn,Sp,KS,F.1,M))
+}
+cutoff_data=cutoff_data[-1,]
+my_cutoff=cutoff_data$cutoff[which.max(cutoff_data$KS)]
+> my_cutoff
+[1] 0.124
+test.predicted=as.numeric(test.score>my_cutoff)
+write.csv(test.predicted,"mysubmissionhardclasses.csv",row.names=F)
 
-# Session Data files
-.RData
 
-# User-specific files
-.Ruserdata
 
-# Example code in package build process
-*-Ex.R
 
-# Output files from R CMD build
-/*.tar.gz
 
-# Output files from R CMD check
-/*.Rcheck/
 
-# RStudio files
-.Rproj.user/
 
-# produced vignettes
-vignettes/*.html
-vignettes/*.pdf
 
-# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
-.httr-oauth
 
-# knitr and R markdown default cache directories
-*_cache/
-/cache/
 
-# Temporary files created by R markdown
-*.utf8.md
-*.knit.md
 
-# R Environment Variables
-.Renviron
+
+
